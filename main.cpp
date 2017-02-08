@@ -11,15 +11,76 @@ ofstream file;
 
 struct ArgsCollection
 {
-    ArgsCollection() : repeat(-1), files(1), min_num(2), max_num(5), file_size(0), current_size(0)
+    ArgsCollection() : repeat(-1), max_repeat(-1), repeat_count(0), last_repeat_char_index(NULL), files(1), min_num(2), max_num(5), file_size(0), current_size(0)
     { 
         fileName = const_cast<char*>("alist.txt");
     }
     
     char * fileName;
-    int repeat;
+    int repeat, max_repeat, repeat_count;
+    char * last_repeat_char_index;
     unsigned int files, min_num, max_num;
     unsigned long long int file_size, current_size;
+    
+    bool checkRepetitionRepeat()
+    {
+        return (max_repeat > -1 && repeat_count >= max_repeat);
+    }
+    
+    void pushRepetitionCharIndex(char c)
+    {
+        char * temp = new char[repeat_count];
+        
+        if (last_repeat_char_index != NULL)
+            memcpy(temp, last_repeat_char_index, repeat_count-1); 
+        
+        temp[repeat_count-1] = c;
+        
+        if (last_repeat_char_index != NULL)
+            delete[] last_repeat_char_index;
+        
+        last_repeat_char_index = temp;
+    }
+    
+    void popRepetitionCharIndex(char c)
+    {
+        if (last_repeat_char_index != NULL && repeat_count == 0)
+        {
+            delete[] last_repeat_char_index;
+            last_repeat_char_index = NULL;
+            return;
+        }
+
+        char * temp = new char[repeat_count];
+        
+        bool skipped = false;
+        for (int i = 0; i < (repeat_count+1); ++i)
+        {
+            if (last_repeat_char_index[i] == c)
+            {
+                skipped = true;
+                continue;
+            }
+            
+            temp[skipped ? (i-1) : i] = last_repeat_char_index[i];
+        }
+        
+        delete[] last_repeat_char_index;
+        
+        last_repeat_char_index = temp;
+    }
+    
+    bool isInRepetition(char c)
+    {
+        if (last_repeat_char_index == NULL || repeat_count < 1)
+            return false;
+        
+        for (int i = 0; i < repeat_count; ++i)
+            if (arrChars[last_repeat_char_index[i]] == c)
+                return true;
+        
+        return false;
+    }
 };
 
 ArgsCollection sArgs;
@@ -31,11 +92,27 @@ void generateNextCharacter(char * str, int size, int strIndex, char charsIndex)
     if (sArgs.repeat > -1)
     {
         int num = 0;
-        for (int i = 0; i < arrSize; ++i)
+        
+        if (sArgs.last_repeat_char_index != NULL && sArgs.checkRepetitionRepeat() && sArgs.isInRepetition(str[strIndex]))
+        {
+            --sArgs.repeat_count;
+            sArgs.popRepetitionCharIndex(charsIndex);
+        }
+        
+        for (int i = 0; i < size; ++i)
         {
             if (str[i] == arrChars[charsIndex])
                 ++num;
-                
+
+            if (num > sArgs.repeat && sArgs.last_repeat_char_index == NULL && sArgs.repeat_count < sArgs.max_repeat)
+            {
+                ++sArgs.repeat_count;
+                sArgs.pushRepetitionCharIndex(charsIndex);
+            }
+            
+            if (num > 0 && sArgs.checkRepetitionRepeat())
+                return;
+            
             if (num > sArgs.repeat)
                 return;
         }
@@ -48,7 +125,7 @@ void generateNextCharacter(char * str, int size, int strIndex, char charsIndex)
         if (!file.is_open())
             file.open(sArgs.fileName, ios::app);
         
-        if (sArgs.current_size > 0 && sArgs.current_size >= sArgs.file_size)
+        if (sArgs.file_size != 0 && sArgs.current_size > 0 && sArgs.current_size >= sArgs.file_size)
         {
             cout << "Finished successfully! Wrote: " << double(sArgs.current_size/pow(1024,2)) << " MBytes" << endl;
             exit(0);
@@ -135,7 +212,7 @@ void generateCharactersInASCIIRange(char first, char last)
         delete[] tempChars;
 }
 
-void generateDictionaryArray(int argc, char ** argv)
+bool generateDictionaryArray(int argc, char ** argv)
 {
     bool useLowCaps = false, useUpperCaps = false, useNumbers = false, useRandCharacters = false;
     
@@ -151,6 +228,9 @@ void generateDictionaryArray(int argc, char ** argv)
                 break;
             case 114: // 'r'
                 sArgs.repeat = atoi(argv[i+1]);
+                break;
+            case 82: // 'R'
+                sArgs.max_repeat = atoi(argv[i+1]);
                 break;
             case 97: // 'a'
                 sArgs.min_num = atoi(argv[i+1]);
@@ -178,8 +258,8 @@ void generateDictionaryArray(int argc, char ** argv)
                             sArgs.file_size *= pow(1024, 3);
                             break;
                         default:
-                            cout << "Wrong file size Unit given, use G for Gigabyte(s), M for Megabyte(s), K for Kilobyte(s). Example: 1G == 1 Gigabyte" << endl; 
-                            exit(0);
+                            cout << "Wrong file size Unit given, use G for Gigabyte(s), M for Megabyte(s), K for Kilobyte(s). Example: 1G == 1 Gigabyte" << endl;
+                            return false;
                             break;
                     }
                 }
@@ -218,14 +298,18 @@ void generateDictionaryArray(int argc, char ** argv)
         generateCharactersInASCIIRange('[', '`');
         generateCharactersInASCIIRange('{', '~');
     }
+    
+    return true;
 }
 
 void showHelp()
 {
     cout << "Options (with example of input):" << endl 
+        << "-(Option) (Example Input) | (Comment)" << endl
         << "-o example.txt | Output to a file name" << endl
         << "-s 5           | Split to equal number of files" << endl
         << "-r 2           | Repeat the same character only a number of times in a row" << endl
+        << "-R 1           | Only used when -r is used, number of characters repetition per combination allowed (limits repetition itself) i.e. (if param is 1) b3a9k23, 001234, EE9TPL" << endl
         << "-a 4           | Minimal number of characters to begin with" << endl
         << "-b 9           | Maximum number of characters to end with" << endl
         << "-l 12G         | Maximum size of your file in Gigabytes" << endl
@@ -259,7 +343,9 @@ int main(int argc, char ** argv)
             return 0;
         }
         
-        generateDictionaryArray(argc, argv);
+        if (!generateDictionaryArray(argc, argv))
+            return 0;
+        
         generateStrings();
         cout << "Finished successfully! Wrote: " << double(sArgs.current_size/pow(1024,2)) << " MBytes" << endl;
     }
