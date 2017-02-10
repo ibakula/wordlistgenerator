@@ -124,7 +124,7 @@ void generateNextCharacter(char * str, int size, int strIndex, char charsIndex)
     if (str[0] != 0)
     {
         if (sArgs.files > 1 && sArgs.filesCount < sArgs.files)
-            if ((sArgs.currentSize + size + 1) > ((sArgs.fileSize / sArgs.files) * (sArgs.filesCount > 0 ? sArgs.filesCount : 1))) // ie offset etc
+            if ((sArgs.currentSize + size + 1) > ((sArgs.fileSize / sArgs.files) * sArgs.filesCount) // ie offset etc
             {
                 ++sArgs.filesCount;
                 if (file.is_open())
