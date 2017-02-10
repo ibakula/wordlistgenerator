@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
+#include <string>
 #include <cmath>
 
 using namespace std;
@@ -11,72 +12,72 @@ ofstream file;
 
 struct ArgsCollection
 {
-    ArgsCollection() : repeat(-1), max_repeat(-1), repeat_count(0), last_repeat_char_index(NULL), files(1), min_num(2), max_num(5), file_size(0), current_size(0)
+    ArgsCollection() : repeat(-1), maxRepeat(-1), repetitionCount(0), lastRepeatIndex(NULL), files(1), filesCount(1), charsMin(3), charsMax(5), fileSize(0), currentSize(0)
     { 
         fileName = const_cast<char*>("alist.txt");
     }
     
     char * fileName;
-    int repeat, max_repeat, repeat_count;
-    char * last_repeat_char_index;
-    unsigned int files, min_num, max_num;
-    unsigned long long int file_size, current_size;
+    int repeat, maxRepeat, repetitionCount;
+    char * lastRepeatIndex;
+    int files, filesCount, charsMin, charsMax;
+    unsigned long long int fileSize, currentSize;
     
     bool checkRepetitionRepeat()
     {
-        return (max_repeat > -1 && repeat_count >= max_repeat);
+        return (maxRepeat > -1 && repetitionCount >= maxRepeat);
     }
     
     void pushRepetitionCharIndex(char c)
     {
-        char * temp = new char[repeat_count];
+        char * temp = new char[repetitionCount];
         
-        if (last_repeat_char_index != NULL)
-            memcpy(temp, last_repeat_char_index, repeat_count-1); 
+        if (lastRepeatIndex != NULL)
+            memcpy(temp, lastRepeatIndex, repetitionCount-1); 
         
-        temp[repeat_count-1] = c;
+        temp[repetitionCount-1] = c;
         
-        if (last_repeat_char_index != NULL)
-            delete[] last_repeat_char_index;
+        if (lastRepeatIndex != NULL)
+            delete[] lastRepeatIndex;
         
-        last_repeat_char_index = temp;
+        lastRepeatIndex = temp;
     }
     
     void popRepetitionCharIndex(char c)
     {
-        if (last_repeat_char_index != NULL && repeat_count == 0)
+        if (lastRepeatIndex != NULL && repetitionCount == 0)
         {
-            delete[] last_repeat_char_index;
-            last_repeat_char_index = NULL;
+            delete[] lastRepeatIndex;
+            lastRepeatIndex = NULL;
             return;
         }
 
-        char * temp = new char[repeat_count];
+        char * temp = new char[repetitionCount];
         
         bool skipped = false;
-        for (int i = 0; i < (repeat_count+1); ++i)
+        for (int i = 0; i < (repetitionCount+1); ++i)
         {
-            if (last_repeat_char_index[i] == c)
+            if (lastRepeatIndex[i] == c)
             {
                 skipped = true;
                 continue;
             }
             
-            temp[skipped ? (i-1) : i] = last_repeat_char_index[i];
+            temp[skipped ? (i-1) : i] = lastRepeatIndex[i];
         }
         
-        delete[] last_repeat_char_index;
+        delete[] lastRepeatIndex;
         
-        last_repeat_char_index = temp;
+        lastRepeatIndex = temp;
     }
     
     bool isInRepetition(char c)
     {
-        if (last_repeat_char_index == NULL || repeat_count < 1)
+        if (lastRepeatIndex == NULL || repetitionCount < 1)
             return false;
         
-        for (int i = 0; i < repeat_count; ++i)
-            if (arrChars[last_repeat_char_index[i]] == c)
+        for (int i = 0; i < repetitionCount; ++i)
+            if (arrChars[lastRepeatIndex[i]] == c)
                 return true;
         
         return false;
@@ -93,9 +94,9 @@ void generateNextCharacter(char * str, int size, int strIndex, char charsIndex)
     {
         int num = 0;
         
-        if (sArgs.last_repeat_char_index != NULL && sArgs.checkRepetitionRepeat() && sArgs.isInRepetition(str[strIndex]))
+        if (sArgs.lastRepeatIndex != NULL && sArgs.checkRepetitionRepeat() && sArgs.isInRepetition(str[strIndex]))
         {
-            --sArgs.repeat_count;
+            --sArgs.repetitionCount;
             sArgs.popRepetitionCharIndex(charsIndex);
         }
         
@@ -104,9 +105,9 @@ void generateNextCharacter(char * str, int size, int strIndex, char charsIndex)
             if (str[i] == arrChars[charsIndex])
                 ++num;
 
-            if (num > sArgs.repeat && sArgs.last_repeat_char_index == NULL && sArgs.repeat_count < sArgs.max_repeat)
+            if (num > sArgs.repeat && sArgs.lastRepeatIndex == NULL && sArgs.repetitionCount < sArgs.maxRepeat)
             {
-                ++sArgs.repeat_count;
+                ++sArgs.repetitionCount;
                 sArgs.pushRepetitionCharIndex(charsIndex);
             }
             
@@ -122,18 +123,39 @@ void generateNextCharacter(char * str, int size, int strIndex, char charsIndex)
     
     if (str[0] != 0)
     {
-        if (!file.is_open())
-            file.open(sArgs.fileName, ios::app);
+        if (sArgs.files > 1 && sArgs.filesCount < sArgs.files)
+            if ((sArgs.currentSize + size + 1) > ((sArgs.fileSize / sArgs.files) * (sArgs.filesCount > 0 ? sArgs.filesCount : 1))) // ie offset etc
+            {
+                ++sArgs.filesCount;
+                if (file.is_open())
+                    file.close();
+            }
         
-        if (sArgs.file_size != 0 && sArgs.current_size > 0 && sArgs.current_size >= sArgs.file_size)
+        if (!file.is_open())
         {
-            cout << "Finished successfully! Wrote: " << double(sArgs.current_size/pow(1024,2)) << " MBytes" << endl;
+            if (sArgs.files <= 1)
+                file.open(sArgs.fileName, ios::app);
+            else
+            {
+                string fileName = sArgs.fileName;
+                size_t pos = fileName.find('.');
+                
+                if (pos != string::npos)
+                    fileName.insert(pos, to_string(sArgs.filesCount));
+                
+                file.open(fileName, ios::app);
+            }
+        }
+        
+        if (sArgs.fileSize != 0 && sArgs.currentSize > 0 && sArgs.currentSize >= sArgs.fileSize)
+        {
+            cout << "Finished successfully! Wrote: " << double(sArgs.currentSize/pow(1024,2)) << " MBytes" << endl;
             exit(0);
         }
         
         file.write(str, size);
         file.put('\n');
-        sArgs.current_size += (size + 1);
+        sArgs.currentSize += (size + 1);
     }
     
     if ((strIndex+1) < size && (strIndex == 0 || str[strIndex-1] != 0))
@@ -178,7 +200,7 @@ void generateString(char * str, int size)
 void generateStrings()
 {
     char * str;
-    for (int i = sArgs.min_num; i <= sArgs.max_num; ++i)
+    for (int i = sArgs.charsMin; i <= sArgs.charsMax; ++i)
     {
         str = new char[i];
         memset(str, 0, i);
@@ -230,35 +252,35 @@ bool generateDictionaryArray(int argc, char ** argv)
                 sArgs.repeat = atoi(argv[i+1]);
                 break;
             case 82: // 'R'
-                sArgs.max_repeat = atoi(argv[i+1]);
+                sArgs.maxRepeat = atoi(argv[i+1]);
                 break;
             case 97: // 'a'
-                sArgs.min_num = atoi(argv[i+1]);
+                sArgs.charsMin = atoi(argv[i+1]);
                 break;
             case 98: // 'b'
-                sArgs.max_num = atoi(argv[i+1]);
+                sArgs.charsMin = atoi(argv[i+1]);
                 break;
             case 108: // 'l'
                 {
-                    sArgs.file_size = atoi(argv[i+1]);
+                    sArgs.fileSize = atoi(argv[i+1]);
                     string unit = argv[i+1];
                         
                     switch (unit.back())
                     {
                         case 75: // 'K'
                         case 107:
-                            sArgs.file_size *= 1024;
+                            sArgs.fileSize *= 1024;
                             break;
                         case 77: // 'M'
                         case 109:
-                            sArgs.file_size *= pow(1024, 2);
+                            sArgs.fileSize *= pow(1024, 2);
                             break;
                         case 71: // 'G'
                         case 103:
-                            sArgs.file_size *= pow(1024, 3);
+                            sArgs.fileSize *= pow(1024, 3);
                             break;
                         default:
-                            cout << "Wrong file size Unit given, use G for Gigabyte(s), M for Megabyte(s), K for Kilobyte(s). Example: 1G == 1 Gigabyte" << endl;
+                            cerr << "Wrong file size Unit given, use G for Gigabyte(s), M for Megabyte(s), K for Kilobyte(s). Example: 1G == 1 Gigabyte" << endl;
                             return false;
                             break;
                     }
@@ -278,6 +300,9 @@ bool generateDictionaryArray(int argc, char ** argv)
                 break;
         }
     }
+    
+    if (sArgs.files > 1 && sArgs.fileSize == 0)
+        cerr << "-s option ignored, please specify -l or -L to use this option" << endl;
     
     if (!useLowCaps && !useUpperCaps && !useNumbers && !useRandCharacters)
         useLowCaps = true;
@@ -347,7 +372,7 @@ int main(int argc, char ** argv)
             return 0;
         
         generateStrings();
-        cout << "Finished successfully! Wrote: " << double(sArgs.current_size/pow(1024,2)) << " MBytes" << endl;
+        cout << "Finished successfully! Wrote: " << double(sArgs.currentSize/pow(1024,2)) << " MBytes" << endl;
     }
     catch (exception& e)
     {
