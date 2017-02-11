@@ -12,7 +12,7 @@ ofstream file;
 
 struct ArgsCollection
 {
-    ArgsCollection() : repeat(-1), maxRepeat(-1), repetitionCount(0), lastRepeatIndex(NULL), files(1), filesCount(1), charsMin(3), charsMax(5), fileSize(0), currentSize(0)
+    ArgsCollection() : repeat(-1), maxRepeat(-1), repetitionCount(0), lastRepeatIndex(NULL), files(1), filesCount(1), charsMin(3), charsMax(5), fileSize(0), currentSize(0), lines(0), lineCount(0)
     { 
         fileName = const_cast<char*>("alist.txt");
     }
@@ -21,7 +21,7 @@ struct ArgsCollection
     int repeat, maxRepeat, repetitionCount;
     char * lastRepeatIndex;
     int files, filesCount, charsMin, charsMax;
-    unsigned long long int fileSize, currentSize;
+    unsigned long long int fileSize, currentSize, lines, lineCount;
     
     bool checkRepetitionRepeat()
     {
@@ -124,13 +124,14 @@ void generateNextCharacter(char * str, int size, int strIndex, char charsIndex)
     if (str[0] != 0)
     {
         if (sArgs.files > 1 && sArgs.filesCount < sArgs.files)
-            if ((sArgs.currentSize + size + 1) > ((sArgs.fileSize / sArgs.files) * sArgs.filesCount) // ie offset etc
+            if ((sArgs.fileSize > 0 && (sArgs.currentSize + size + 1) > ((sArgs.fileSize / sArgs.files) * sArgs.filesCount)) ||
+                (sArgs.fileSize < 1 && sArgs.lines > 0 && (sArgs.lineCount+1) > ((sArgs.lines / sArgs.files) * sArgs.filesCount))) // ie offset etc
             {
                 ++sArgs.filesCount;
                 if (file.is_open())
                     file.close();
             }
-        
+         
         if (!file.is_open())
         {
             if (sArgs.files <= 1)
@@ -147,7 +148,10 @@ void generateNextCharacter(char * str, int size, int strIndex, char charsIndex)
             }
         }
         
-        if (sArgs.fileSize != 0 && sArgs.currentSize > 0 && sArgs.currentSize >= sArgs.fileSize)
+        if (sArgs.lines > 0)
+            ++sArgs.lineCount;
+        
+        if ((sArgs.fileSize > 0 && sArgs.currentSize > 0 && sArgs.currentSize >= sArgs.fileSize) || (sArgs.lines > 0 && sArgs.lineCount > sArgs.lines))
         {
             cout << "Finished successfully! Wrote: " << double(sArgs.currentSize/pow(1024,2)) << " MBytes" << endl;
             exit(0);
@@ -286,6 +290,9 @@ bool generateDictionaryArray(int argc, char ** argv)
                     }
                 }
                 break;
+            case 76: // 'L'
+                sArgs.lines = atoi(argv[i+1]);
+                break;
             case 99: // 'c'
                 useLowCaps = true;
                 break;
@@ -301,8 +308,11 @@ bool generateDictionaryArray(int argc, char ** argv)
         }
     }
     
-    if (sArgs.files > 1 && sArgs.fileSize == 0)
+    if (sArgs.files > 1 && sArgs.lines < 1 && sArgs.fileSize < 1)
+    {
+        sArgs.files = 1;
         cerr << "-s option ignored, please specify -l or -L to use this option" << endl;
+    }
     
     if (!useLowCaps && !useUpperCaps && !useNumbers && !useRandCharacters)
         useLowCaps = true;
@@ -338,6 +348,7 @@ void showHelp()
         << "-a 4           | Minimal number of characters to begin with" << endl
         << "-b 9           | Maximum number of characters to end with" << endl
         << "-l 12G         | Maximum size of your file in Gigabytes" << endl
+        << "-L 15000       | Total number of lines to be generated" << endl
         << "-c             | Use lowercaps letters" << endl
         << "-C             | Use uppercaps letters" << endl
         << "-1             | Use numbers" << endl
