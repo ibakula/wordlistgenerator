@@ -133,7 +133,7 @@ void generateNextCharacter(char * str, int size, int strIndex, char charsIndex)
                     file.close();
             }
          
-        if (!file.is_open())
+        if (!file.is_open() && (sArgs.fileName != "alist.txt" && !sArgs.output))
         {
             if (sArgs.files <= 1)
                 file.open(sArgs.fileName, ios::app);
@@ -158,9 +158,12 @@ void generateNextCharacter(char * str, int size, int strIndex, char charsIndex)
             exit(0);
         }
         
-        file.write(str, size);
-        file.put('\n');
-        sArgs.currentSize += (size + 1);
+        if (sArgs.fileName != "alist.txt" && !sArgs.output)
+        {
+            file.write(str, size);
+            file.put('\n');
+            sArgs.currentSize += (size + 1);
+        }
         
         if (sArgs.output)
             cout << str << endl;
