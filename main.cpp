@@ -12,7 +12,7 @@ ofstream file;
 
 struct ArgsCollection
 {
-    ArgsCollection() : repeat(-1), maxRepeat(-1), repetitionCount(0), lastRepeatIndex(NULL), files(1), filesCount(1), charsMin(3), charsMax(5), fileSize(0), currentSize(0), lines(0), lineCount(0)
+    ArgsCollection() : repeat(-1), maxRepeat(-1), repetitionCount(0), lastRepeatIndex(NULL), files(1), filesCount(1), charsMin(3), charsMax(5), fileSize(0), currentSize(0), lines(0), lineCount(0), output(false)
     { 
         fileName = const_cast<char*>("alist.txt");
     }
@@ -22,6 +22,7 @@ struct ArgsCollection
     char * lastRepeatIndex;
     int files, filesCount, charsMin, charsMax;
     unsigned long long int fileSize, currentSize, lines, lineCount;
+    bool output;
     
     bool checkRepetitionRepeat()
     {
@@ -160,6 +161,9 @@ void generateNextCharacter(char * str, int size, int strIndex, char charsIndex)
         file.write(str, size);
         file.put('\n');
         sArgs.currentSize += (size + 1);
+        
+        if (sArgs.output)
+            cout << str << endl;
     }
     
     if ((strIndex+1) < size && (strIndex == 0 || str[strIndex-1] != 0))
@@ -262,7 +266,7 @@ bool generateDictionaryArray(int argc, char ** argv)
                 sArgs.charsMin = atoi(argv[i+1]);
                 break;
             case 98: // 'b'
-                sArgs.charsMin = atoi(argv[i+1]);
+                sArgs.charsMax = atoi(argv[i+1]);
                 break;
             case 108: // 'l'
                 {
@@ -305,6 +309,9 @@ bool generateDictionaryArray(int argc, char ** argv)
             case 36: // '$'
                 useRandCharacters = true;
                 break;
+            case 118: // 'v'
+                sArgs.output = true;
+                break;
         }
     }
     
@@ -343,13 +350,13 @@ void showHelp()
         << "-(Option) (Example Input) | (Comment)" << endl
         << "-1             | Use numbers" << endl
         << "-a 4           | Minimal number of characters to begin with" << endl
-        << "-b 9           | Maximum number of characters to end with" << 
+        << "-b 9           | Maximum number of characters to end with" << endl
         << "-c             | Use lowercaps letters" << endl
         << "-C             | Use uppercaps letters" << endl
         << "-l 12G         | Maximum size of your file in Gigabytes" << endl
         << "-L 15000       | Total number of lines to be generated" << endl
         << "-o example.txt | Output to a file name" << endl
-        << "-r 2           | Repeat the same character only a number of times in a row" << 
+        << "-r 2           | Repeat the same character only a number of times in a row" << endl
         << "-R 1           | Only used when -r is used, number of characters repetition per combination allowed (limits repetition itself) i.e. (if param is 1) b3a9k23, 001234, EE9TPL" << endl
         << "-s 5           | Split to equal number of files, -l arg has a higher priority than -L" << endl
         << "-v             | Output generated" << endl
