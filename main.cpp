@@ -362,7 +362,7 @@ void showHelp()
         << "-r 2           | Repeat the same character only a number of times in a row" << endl
         << "-R 1           | Only used when -r is used, number of characters repetition per combination allowed (limits repetition itself) i.e. (if param is 1) b3a9k23, 001234, EE9TPL" << endl
         << "-s 5           | Split to equal number of files, -l arg has a higher priority than -L" << endl
-        << "-v             | Output generated" << endl
+        << "-v             | Output generated, note that output to file is ignored unless -o is specifically defined" << endl
         << "-$             | Use $#&.. characters" << endl
         << "The example of arguments provided: " << endl
         << "cppnary -o example.txt -s 5 -r 2 -a 4 -b 9 -l 12G" << endl
