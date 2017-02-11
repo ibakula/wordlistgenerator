@@ -153,7 +153,7 @@ void generateNextCharacter(char * str, int size, int strIndex, char charsIndex)
         
         if ((sArgs.fileSize > 0 && sArgs.currentSize > 0 && sArgs.currentSize >= sArgs.fileSize) || (sArgs.lines > 0 && sArgs.lineCount > sArgs.lines))
         {
-            cout << "Finished successfully! Wrote: " << double(sArgs.currentSize/pow(1024,2)) << " MBytes" << endl;
+            cerr << "Finished successfully! Wrote: " << double(sArgs.currentSize/pow(1024,2)) << " MBytes" << endl;
             exit(0);
         }
         
@@ -341,17 +341,18 @@ void showHelp()
 {
     cout << "Options (with example of input):" << endl 
         << "-(Option) (Example Input) | (Comment)" << endl
-        << "-o example.txt | Output to a file name" << endl
-        << "-s 5           | Split to equal number of files" << endl
-        << "-r 2           | Repeat the same character only a number of times in a row" << endl
-        << "-R 1           | Only used when -r is used, number of characters repetition per combination allowed (limits repetition itself) i.e. (if param is 1) b3a9k23, 001234, EE9TPL" << endl
+        << "-1             | Use numbers" << endl
         << "-a 4           | Minimal number of characters to begin with" << endl
-        << "-b 9           | Maximum number of characters to end with" << endl
-        << "-l 12G         | Maximum size of your file in Gigabytes" << endl
-        << "-L 15000       | Total number of lines to be generated" << endl
+        << "-b 9           | Maximum number of characters to end with" << 
         << "-c             | Use lowercaps letters" << endl
         << "-C             | Use uppercaps letters" << endl
-        << "-1             | Use numbers" << endl
+        << "-l 12G         | Maximum size of your file in Gigabytes" << endl
+        << "-L 15000       | Total number of lines to be generated" << endl
+        << "-o example.txt | Output to a file name" << endl
+        << "-r 2           | Repeat the same character only a number of times in a row" << 
+        << "-R 1           | Only used when -r is used, number of characters repetition per combination allowed (limits repetition itself) i.e. (if param is 1) b3a9k23, 001234, EE9TPL" << endl
+        << "-s 5           | Split to equal number of files, -l arg has a higher priority than -L" << endl
+        << "-v             | Output generated" << endl
         << "-$             | Use $#&.. characters" << endl
         << "The example of arguments provided: " << endl
         << "cppnary -o example.txt -s 5 -r 2 -a 4 -b 9 -l 12G" << endl
@@ -369,7 +370,7 @@ int main(int argc, char ** argv)
     {
         if (argc < 2)
         {
-            cout << "Use -h to see a list of available options" << endl;
+            cerr << "Use -h to see a list of available options" << endl;
             return 0;
         }
         
@@ -383,11 +384,11 @@ int main(int argc, char ** argv)
             return 0;
         
         generateStrings();
-        cout << "Finished successfully! Wrote: " << double(sArgs.currentSize/pow(1024,2)) << " MBytes" << endl;
+        cerr << "Finished successfully! Wrote: " << double(sArgs.currentSize/pow(1024,2)) << " MBytes" << endl;
     }
     catch (exception& e)
     {
-        cout << e.what() << endl;
+        cerr << e.what() << endl;
     }
     return 0;
 }
