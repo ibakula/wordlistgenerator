@@ -8,21 +8,22 @@ using namespace std;
 
 char* arrChars;
 int arrSize;
-ofstream file;
+fstream file;
 
 struct ArgsCollection
 {
-    ArgsCollection() : repeat(-1), maxRepeat(-1), repetitionCount(0), lastRepeatIndex(NULL), files(1), filesCount(1), charsMin(3), charsMax(5), fileSize(0), currentSize(0), lines(0), lineCount(0), output(false)
+    ArgsCollection() : repeat(-1), maxRepeat(-1), repetitionCount(0), lastRepeatIndex(NULL), files(1), filesCount(1), charsMin(3), charsMax(5), fileSize(0), currentSize(0), lines(0), lineCount(0), output(false), hasFileCheckpoint(false)
     { 
         fileName = const_cast<char*>("alist.txt");
+        start = NULL;
     }
     
-    char * fileName;
+    char * fileName, * start;
     int repeat, maxRepeat, repetitionCount;
     char * lastRepeatIndex;
     int files, filesCount, charsMin, charsMax;
     unsigned long long int fileSize, currentSize, lines, lineCount;
-    bool output;
+    bool output, hasFileCheckpoint;
     
     bool checkRepetitionRepeat()
     {
@@ -208,13 +209,89 @@ void generateString(char * str, int size)
         generateCharacters(str, size, i);
 }
 
+size_t getSizeOfStartStr()
+{
+    size_t itr = 0;
+    
+    while (sArgs.start[itr] != 0)
+        ++itr;
+    
+    return itr;
+}
+
 void generateStrings()
 {
     char * str;
+    
+    if (sArgs.start != NULL)
+    {
+        if (sArgs.hasFileCheckpoint)
+        {
+            file.open(sArgs.start, ios::in);
+            string str2;
+            
+            if (file.is_open())
+            {
+                char c = 0;
+                file.seekg(-2, file.end);
+
+                do
+                {
+                    file.get(c);
+                    if (file.tellg() < 2 || c == '\n')
+                    {
+                        if (file.tellg() == 1)
+                            file.seekg(0, file.beg);
+                        
+                        std::getline(file, str2);
+                        break;
+                    }
+                }
+                while (file.seekg(int(file.tellg())-2));
+            }
+            
+            file.close();
+            
+            if (!str2.empty())
+            {
+                sArgs.charsMin = str2.size();
+                str = new char[sArgs.charsMin];
+                memcpy(str, str2.c_str(), sArgs.charsMin);
+            }
+            else
+            {
+                sArgs.start = NULL;
+                sArgs.hasFileCheckpoint = false;
+                cerr << "Source file invalid, -t option ignored" << endl;
+            }
+        }
+        else
+        {
+            size_t size = getSizeOfStartStr();
+            
+            if (size > 0)
+            {
+                str = new char[size];
+                memcpy(str, sArgs.start, size);
+                sArgs.charsMin = size;
+            }
+            else 
+            {
+                sArgs.start = NULL;
+                cerr << "Invalid input, -T option ignored." << endl;
+            }
+        }
+    }
+
     for (int i = sArgs.charsMin; i <= sArgs.charsMax; ++i)
     {
-        str = new char[i];
-        memset(str, 0, i);
+        if (sArgs.start == NULL)
+        {
+            str = new char[i];
+            memset(str, 0, i);
+        }
+        else sArgs.start = NULL;
+        
         generateString(str, i);
         delete[] str;
     }
@@ -247,7 +324,7 @@ void generateCharactersInASCIIRange(char first, char last)
 
 bool generateDictionaryArray(int argc, char ** argv)
 {
-    bool useLowCaps = false, useUpperCaps = false, useNumbers = false, useRandCharacters = false;
+    bool useLowCaps = false, useUpperCaps = false, useNumbers = false, useRandCharacters = false, hasCheckpoint = false;
     
     for (int i = 0; i < argc; ++i)
     {
@@ -315,7 +392,22 @@ bool generateDictionaryArray(int argc, char ** argv)
             case 118: // 'v'
                 sArgs.output = true;
                 break;
+            case 116: // 't'
+                sArgs.start = argv[i+1];
+                sArgs.hasFileCheckpoint = true;
+                break;
+            case 84: // 'T'
+                sArgs.start = argv[i+1];
+                hasCheckpoint = true;
+                break;
         }
+    }
+    
+    if ((sArgs.hasFileCheckpoint || hasCheckpoint) && (sArgs.start == NULL || (sArgs.hasFileCheckpoint && sArgs.start[0] == '-')))
+    {
+        sArgs.hasFileCheckpoint = false;
+        sArgs.start = NULL;
+        cerr << "-t option ignored, please include a file output" << endl;
     }
     
     if (sArgs.files > 1 && sArgs.lines < 1 && sArgs.fileSize < 1)
@@ -362,6 +454,8 @@ void showHelp()
         << "-r 2           | Repeat the same character only a number of times in a row" << endl
         << "-R 1           | Only used when -r is used, number of characters repetition per combination allowed (limits repetition itself) i.e. (if param is 1) b3a9k23, 001234, EE9TPL" << endl
         << "-s 5           | Split to equal number of files, -l arg has a higher priority than -L" << endl
+        << "-t example.txt | Continue from last occurrence, -a option is ignored" << endl
+        << "-T 11AE435     | Continue from input, -a option continues from inputs length" << endl
         << "-v             | Output generated, note that output to file is ignored unless -o is specifically defined" << endl
         << "-$             | Use $#&.. characters" << endl
         << "The example of arguments provided: " << endl
