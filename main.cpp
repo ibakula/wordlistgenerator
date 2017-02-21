@@ -127,8 +127,11 @@ void generateNextCharacter(char * str, int size, int strIndex, char charsIndex)
     {
         if (sArgs.files > 1 && sArgs.filesCount < sArgs.files)
             if ((sArgs.fileSize > 0 && (sArgs.currentSize + size + 1) > ((sArgs.fileSize / sArgs.files) * sArgs.filesCount)) ||
-                (sArgs.fileSize < 1 && sArgs.lines > 0 && (sArgs.lineCount+1) > ((sArgs.lines / sArgs.files) * sArgs.filesCount))) // ie offset etc
+                (sArgs.lines > 0 && (sArgs.lineCount+1) > (sArgs.lines / sArgs.files))) // ie offset etc
             {
+                if (sArgs.lines > 0 && (sArgs.lineCount+1) > ((sArgs.lines / sArgs.files) * sArgs.filesCount))
+                    sArgs.lineCount = 0;
+                
                 ++sArgs.filesCount;
                 if (file.is_open())
                     file.close();
