@@ -12,45 +12,50 @@ fstream file;
 
 struct ArgsCollection
 {
-    ArgsCollection() : repeat(-1), maxRepeat(-1), repetitionCount(0), lastRepeatIndex(NULL), files(1), filesCount(1), charsMin(3), charsMax(5), fileSize(0), currentSize(0), lines(0), lineCount(0), output(false), hasFileCheckpoint(false)
+    ArgsCollection() : repeat(-1), repetitionLimiter(-1), repetitionCount(0), repetitorArray(NULL), files(1), filesCount(1), charsMin(3), charsMax(5), fileSize(0), currentSize(0), lines(0), lineCount(0), output(false), hasFileCheckpoint(false)
     { 
         fileName = const_cast<char*>("alist.txt");
         start = NULL;
     }
     
     char * fileName, * start;
-    int repeat, maxRepeat, repetitionCount;
-    char * lastRepeatIndex;
+    int repeat, repetitionLimiter, repetitionCount;
+    char * repetitorArray;
     int files, filesCount, charsMin, charsMax;
     unsigned long long int fileSize, currentSize, lines, lineCount;
     bool output, hasFileCheckpoint;
     
     bool checkRepetitionRepeat()
     {
-        return (maxRepeat > -1 && repetitionCount >= maxRepeat);
+        return (repetitionLimiter > -1 && repetitionCount >= repetitionLimiter);
     }
     
     void pushRepetitionCharIndex(char c)
     {
+        ++repetitionCount;
         char * temp = new char[repetitionCount];
         
-        if (lastRepeatIndex != NULL)
-            memcpy(temp, lastRepeatIndex, repetitionCount-1); 
+        if (repetitorArray != NULL)
+        {
+            memcpy(temp, repetitorArray, repetitionCount-1); 
+            delete[] repetitorArray;
+        }
         
         temp[repetitionCount-1] = c;
         
-        if (lastRepeatIndex != NULL)
-            delete[] lastRepeatIndex;
-        
-        lastRepeatIndex = temp;
+        repetitorArray = temp;
     }
     
     void popRepetitionCharIndex(char c)
     {
-        if (lastRepeatIndex != NULL && repetitionCount == 0)
+        --repetitionCount;
+        
+        if (repetitionCount == 0)
         {
-            delete[] lastRepeatIndex;
-            lastRepeatIndex = NULL;
+            if (repetitorArray != NULL)
+                delete[] repetitorArray;
+            
+            repetitorArray = NULL;
             return;
         }
 
@@ -59,27 +64,27 @@ struct ArgsCollection
         bool skipped = false;
         for (int i = 0; i < (repetitionCount+1); ++i)
         {
-            if (lastRepeatIndex[i] == c)
+            if (repetitorArray[i] == c)
             {
                 skipped = true;
                 continue;
             }
             
-            temp[skipped ? (i-1) : i] = lastRepeatIndex[i];
+            temp[skipped ? (i-1) : i] = repetitorArray[i];
         }
         
-        delete[] lastRepeatIndex;
+        delete[] repetitorArray;
         
-        lastRepeatIndex = temp;
+        repetitorArray = temp;
     }
     
     bool isInRepetition(char c)
     {
-        if (lastRepeatIndex == NULL || repetitionCount < 1)
+        if (repetitorArray == NULL || repetitionCount < 1)
             return false;
         
         for (int i = 0; i < repetitionCount; ++i)
-            if (arrChars[lastRepeatIndex[i]] == c)
+            if (repetitorArray[i] == c)
                 return true;
         
         return false;
@@ -96,22 +101,16 @@ void generateNextCharacter(char * str, int size, int strIndex, char charsIndex)
     {
         int num = 0;
         
-        if (sArgs.lastRepeatIndex != NULL && sArgs.checkRepetitionRepeat() && sArgs.isInRepetition(str[strIndex]))
-        {
-            --sArgs.repetitionCount;
+        if (sArgs.repetitorArray != NULL && sArgs.checkRepetitionRepeat() && sArgs.isInRepetition(charsIndex))
             sArgs.popRepetitionCharIndex(charsIndex);
-        }
         
         for (int i = 0; i < size; ++i)
         {
             if (str[i] == arrChars[charsIndex])
                 ++num;
 
-            if (num > sArgs.repeat && sArgs.lastRepeatIndex == NULL && sArgs.repetitionCount < sArgs.maxRepeat)
-            {
-                ++sArgs.repetitionCount;
+            if (num > sArgs.repeat && sArgs.repetitorArray == NULL && sArgs.repetitionCount < sArgs.repetitionLimiter)
                 sArgs.pushRepetitionCharIndex(charsIndex);
-            }
             
             if (num > 0 && sArgs.checkRepetitionRepeat())
                 return;
@@ -343,7 +342,7 @@ bool generateDictionaryArray(int argc, char ** argv)
                 sArgs.repeat = atoi(argv[i+1]);
                 break;
             case 82: // 'R'
-                sArgs.maxRepeat = atoi(argv[i+1]);
+                sArgs.repetitionLimiter = atoi(argv[i+1]);
                 break;
             case 97: // 'a'
                 sArgs.charsMin = atoi(argv[i+1]);
